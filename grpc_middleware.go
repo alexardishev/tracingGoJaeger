@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// UnaryServerInterceptor добавляет трейсинг для gRPC-сервера
+// Интерсептор, добавляющий трейсинг для gRPC-сервера. По сути добавляем его в gRPC и все методы работают.
 func UnaryServerInterceptor(tracerName string) grpc.UnaryServerInterceptor {
 	tracer := otel.Tracer(tracerName)
 
@@ -22,9 +22,11 @@ func UnaryServerInterceptor(tracerName string) grpc.UnaryServerInterceptor {
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (resp any, err error) {
+		//Извлекаю данные из контекста метадату
 		md, _ := metadata.FromIncomingContext(ctx)
+		//Извлекаю из метадаты данные по трейсингу и обогащаю текущий контекст
 		parentCtx := otel.GetTextMapPropagator().Extract(ctx, metadataCarrier(md))
-
+		//Стартую новый спан, если есть родительский, тогда привязываю к родительскому новый спан
 		ctx, span := tracer.Start(parentCtx, info.FullMethod)
 		defer span.End()
 
@@ -48,7 +50,7 @@ func UnaryServerInterceptor(tracerName string) grpc.UnaryServerInterceptor {
 	}
 }
 
-// metadataCarrier адаптирует метаданные gRPC для OpenTelemetry
+// metadataCarrier адаптирует метаданные gRPC для OpenTelemetry.
 type metadataCarrier metadata.MD
 
 func (mc metadataCarrier) Get(key string) string {

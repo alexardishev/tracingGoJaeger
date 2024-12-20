@@ -16,7 +16,7 @@ var TracerProvider *sdktrace.TracerProvider
 
 // InitTracing инициализирует OpenTelemetry с OTLP
 func InitTracing(serviceName, otlpEndpoint string) error {
-	// Создаём OTLP экспортёр
+	// OTLP экспортёр
 	exp, err := otlptracegrpc.New(
 		context.Background(),
 		otlptracegrpc.WithEndpoint(otlpEndpoint),
@@ -30,7 +30,8 @@ func InitTracing(serviceName, otlpEndpoint string) error {
 	res, err := resource.New(
 		context.Background(),
 		resource.WithAttributes(
-			semconv.ServiceNameKey.String(serviceName), // Используем корректное создание KeyValue
+			semconv.ServiceNameKey.String(serviceName),
+			//Можно добавить дополнительно любые параметры для характеристики сервиса, к примеру можно указать версию или ещё что-то
 		),
 	)
 	if err != nil {
@@ -39,16 +40,16 @@ func InitTracing(serviceName, otlpEndpoint string) error {
 
 	// Создаём провайдер трейсинга
 	TracerProvider = sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exp),  // Отправляем данные пакетами через OTLP
+		sdktrace.WithBatcher(exp),  // Отправляем данные пакетами через OTLP и снижаем нагрузку, если будет дофига запросов
 		sdktrace.WithResource(res), // Передаём ресурс с атрибутами
 	)
 
-	// Устанавливаем глобальный провайдер трейсинга
+	// Устанавливаем глобальный провайдер трейсинга. Чтобы при использовании otel он всегда брал этот провайдер.
 	otel.SetTracerProvider(TracerProvider)
 	return nil
 }
 
-// ShutdownTracing завершает работу провайдера
+// ShutdownTracing завершает работу провайдера. Чтобы при отправки не подтекать по памяти и закрыть все соединения. Плюс дослать что-то, если приложение отлетело.
 func ShutdownTracing(ctx context.Context) {
 	if err := TracerProvider.Shutdown(ctx); err != nil {
 		log.Printf("Error shutting down TracerProvider: %v", err)
