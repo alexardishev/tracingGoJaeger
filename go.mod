@@ -1,4 +1,5 @@
-module tracing_lib
+module github.com/alexardishev/tracingGoJaeger
+
 
 go 1.23.3
 
